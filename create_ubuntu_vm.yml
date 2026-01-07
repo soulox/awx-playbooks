@@ -2,6 +2,7 @@
 - name: Create Ubuntu VM on Proxmox
   hosts: local
   gather_facts: no
+  connection: local
 
   collections:
     - community.proxmox
