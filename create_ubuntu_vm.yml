@@ -1,6 +1,6 @@
 ---
 - name: Create Ubuntu VM on Proxmox
-  hosts: local
+  hosts: localhost
   gather_facts: no
   connection: local
 
