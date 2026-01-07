@@ -4,7 +4,7 @@
   gather_facts: no
 
   collections:
-    - community.general
+    - community.proxmox
 
   vars:
     proxmox_api_host: "your-proxmox-ip"
