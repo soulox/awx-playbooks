@@ -25,36 +25,43 @@
     iso_storage: "local"
 
   tasks:
-    - name: Create Ubuntu VM
-      proxmox_kvm:
-        api_host: "{{ proxmox_api_host }}"
-        api_user: "{{ proxmox_api_user }}"
-        api_password: "{{ proxmox_api_password }}"
-        node: "{{ proxmox_node }}"
-        vmid: "{{ vm_id }}"
-        name: "{{ vm_name }}"
-        memory: "{{ vm_memory }}"
-        cores: "{{ vm_cores }}"
-        cpu: "host"
-        ostype: "l26"
-        ide2: "{{ iso_storage }}:iso/{{ ubuntu_iso }},media=cdrom"
-        scsi0: "{{ vm_storage }}:{{ vm_disk_size }}"
-        scsihw: "virtio-scsi-pci"
-        net0: "virtio,bridge={{ vm_network_bridge }}"
-        boot: "cdn"
-        bootdisk: "scsi0"
-        state: present
-      register: vm_result
+- name: Create Ubuntu VM
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ vm_id }}"
+    name: "{{ vm_name }}"
+    memory: "{{ vm_memory }}"
+    cores: "{{ vm_cores }}"
+    cpu: "host"
+    ostype: "l26"
 
-    - name: Start the VM
-      proxmox_kvm:
-        api_host: "{{ proxmox_api_host }}"
-        api_user: "{{ proxmox_api_user }}"
-        api_password: "{{ proxmox_api_password }}"
-        node: "{{ proxmox_node }}"
-        vmid: "{{ vm_id }}"
-        state: started
+    # CD-ROM on IDE (ide2 equivalent)
+    ide:
+      ide2: "{{ iso_storage }}:iso/{{ ubuntu_iso }},media=cdrom"
 
-    - name: Display VM information
-      debug:
-        msg: "VM {{ vm_name }} (ID: {{ vm_id }}) has been created and started"
+    # Disk on SCSI (scsi0 equivalent)
+    scsi:
+      scsi0: "{{ vm_storage }}:{{ vm_disk_size }}"
+
+    scsihw: "virtio-scsi-pci"
+
+    # NIC (net0 equivalent)
+    net:
+      net0: "virtio,bridge={{ vm_network_bridge }}"
+
+    boot: "cdn"
+    bootdisk: "scsi0"
+    state: present
+  register: vm_result
+
+- name: Start the VM
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ vm_id }}"
+    state: started
