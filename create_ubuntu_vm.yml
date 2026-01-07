@@ -1,63 +1,57 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: awx-playbooks
-  namespace: awx
-data:
-  create_ubuntu_vm.yml: |
-    ---
-    - name: Create Ubuntu VM on Proxmox
-      hosts: localhost
-      gather_facts: no
-      vars:
-        proxmox_api_host: "{{ proxmox_host }}"
-        proxmox_api_user: "{{ proxmox_user }}"
-        proxmox_node: "{{ node_name | default('pve') }}"
-        
-        vm_id: "{{ vmid }}"
-        vm_name: "{{ server_name }}"
-        vm_memory: "{{ memory | default(2048) }}"
-        vm_cores: "{{ cores | default(2) }}"
-        vm_storage: "{{ storage | default('local-lvm') }}"
-        vm_disk_size: "{{ disk_size | default('20G') }}"
-        vm_network_bridge: "{{ network_bridge | default('vmbr0') }}"
-        
-        template_id: 9000
+---
+- name: Create Ubuntu VM on Proxmox
+  hosts: localhost
+  gather_facts: no
+  vars:
+    proxmox_api_host: "your-proxmox-ip"
+    proxmox_api_user: "root@pam"
+    proxmox_api_password: "{{ proxmox_password }}"
+    proxmox_node: "pve"  # Your Proxmox node name
+    
+    # VM Configuration
+    vm_id: 100
+    vm_name: "ubuntu-server-01"
+    vm_memory: 2048
+    vm_cores: 2
+    vm_disk_size: "20G"
+    vm_storage: "local-lvm"
+    vm_network_bridge: "vmbr0"
+    
+    # Ubuntu ISO or template
+    ubuntu_iso: "ubuntu-22.04-server-amd64.iso"
+    iso_storage: "local"
 
-      tasks:
-        - name: Clone VM from cloud-init template
-          community.general.proxmox_kvm:
-            api_host: "{{ proxmox_api_host }}"
-            api_user: "{{ proxmox_api_user }}"
-            api_password: "{{ proxmox_password }}"
-            node: "{{ proxmox_node }}"
-            clone: "{{ template_id }}"
-            vmid: "{{ vm_id }}"
-            name: "{{ vm_name }}"
-            full: yes
-            state: present
-          register: vm_created
+  tasks:
+    - name: Create Ubuntu VM
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_api_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_password }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ vm_id }}"
+        name: "{{ vm_name }}"
+        memory: "{{ vm_memory }}"
+        cores: "{{ vm_cores }}"
+        cpu: "host"
+        ostype: "l26"  # Linux 2.6+ kernel
+        ide2: "{{ iso_storage }}:iso/{{ ubuntu_iso }},media=cdrom"
+        scsi0: "{{ vm_storage }}:{{ vm_disk_size }}"
+        scsihw: "virtio-scsi-pci"
+        net0: "virtio,bridge={{ vm_network_bridge }}"
+        boot: "cdn"
+        bootdisk: "scsi0"
+        state: present
+      register: vm_result
 
-        - name: Configure VM resources
-          community.general.proxmox_kvm:
-            api_host: "{{ proxmox_api_host }}"
-            api_user: "{{ proxmox_api_user }}"
-            api_password: "{{ proxmox_password }}"
-            node: "{{ proxmox_node }}"
-            vmid: "{{ vm_id }}"
-            memory: "{{ vm_memory }}"
-            cores: "{{ vm_cores }}"
-            update: yes
+    - name: Start the VM
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_api_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_password }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ vm_id }}"
+        state: started
 
-        - name: Start the VM
-          community.general.proxmox_kvm:
-            api_host: "{{ proxmox_api_host }}"
-            api_user: "{{ proxmox_api_user }}"
-            api_password: "{{ proxmox_password }}"
-            node: "{{ proxmox_node }}"
-            vmid: "{{ vm_id }}"
-            state: started
-
-        - name: Success message
-          debug:
-            msg: "VM {{ vm_name }} (ID: {{ vm_id }}) created successfully!"
+    - name: Display VM information
+      debug:
+        msg: "VM {{ vm_name }} (ID: {{ vm_id }}) has been created and started"
