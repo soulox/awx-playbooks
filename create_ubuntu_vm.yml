@@ -1,14 +1,17 @@
 ---
 - name: Create Ubuntu VM on Proxmox
-  hosts: localhost
+  hosts: local
   gather_facts: no
+
+  collections:
+    - community.general
+
   vars:
     proxmox_api_host: "your-proxmox-ip"
     proxmox_api_user: "root@pam"
     proxmox_api_password: "{{ proxmox_password }}"
-    proxmox_node: "pve"  # Your Proxmox node name
-    
-    # VM Configuration
+    proxmox_node: "pve"
+
     vm_id: 100
     vm_name: "ubuntu-server-01"
     vm_memory: 2048
@@ -16,14 +19,13 @@
     vm_disk_size: "20G"
     vm_storage: "local-lvm"
     vm_network_bridge: "vmbr0"
-    
-    # Ubuntu ISO or template
+
     ubuntu_iso: "ubuntu-22.04-server-amd64.iso"
     iso_storage: "local"
 
   tasks:
     - name: Create Ubuntu VM
-      community.general.proxmox_kvm:
+      proxmox_kvm:
         api_host: "{{ proxmox_api_host }}"
         api_user: "{{ proxmox_api_user }}"
         api_password: "{{ proxmox_api_password }}"
@@ -33,7 +35,7 @@
         memory: "{{ vm_memory }}"
         cores: "{{ vm_cores }}"
         cpu: "host"
-        ostype: "l26"  # Linux 2.6+ kernel
+        ostype: "l26"
         ide2: "{{ iso_storage }}:iso/{{ ubuntu_iso }},media=cdrom"
         scsi0: "{{ vm_storage }}:{{ vm_disk_size }}"
         scsihw: "virtio-scsi-pci"
@@ -44,7 +46,7 @@
       register: vm_result
 
     - name: Start the VM
-      community.general.proxmox_kvm:
+      proxmox_kvm:
         api_host: "{{ proxmox_api_host }}"
         api_user: "{{ proxmox_api_user }}"
         api_password: "{{ proxmox_api_password }}"
