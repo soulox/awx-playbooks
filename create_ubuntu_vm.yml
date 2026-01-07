@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: awx-playbooks
+  namespace: awx
+data:
+  create_ubuntu_vm.yml: |
+    ---
+    - name: Create Ubuntu VM on Proxmox
+      hosts: localhost
+      gather_facts: no
+      vars:
+        proxmox_api_host: "{{ proxmox_host }}"
+        proxmox_api_user: "{{ proxmox_user }}"
+        proxmox_node: "{{ node_name | default('pve') }}"
+        
+        vm_id: "{{ vmid }}"
+        vm_name: "{{ server_name }}"
+        vm_memory: "{{ memory | default(2048) }}"
+        vm_cores: "{{ cores | default(2) }}"
+        vm_storage: "{{ storage | default('local-lvm') }}"
+        vm_disk_size: "{{ disk_size | default('20G') }}"
+        vm_network_bridge: "{{ network_bridge | default('vmbr0') }}"
+        
+        template_id: 9000
+
+      tasks:
+        - name: Clone VM from cloud-init template
+          community.general.proxmox_kvm:
+            api_host: "{{ proxmox_api_host }}"
+            api_user: "{{ proxmox_api_user }}"
+            api_password: "{{ proxmox_password }}"
+            node: "{{ proxmox_node }}"
+            clone: "{{ template_id }}"
+            vmid: "{{ vm_id }}"
+            name: "{{ vm_name }}"
+            full: yes
+            state: present
+          register: vm_created
+
+        - name: Configure VM resources
+          community.general.proxmox_kvm:
+            api_host: "{{ proxmox_api_host }}"
+            api_user: "{{ proxmox_api_user }}"
+            api_password: "{{ proxmox_password }}"
+            node: "{{ proxmox_node }}"
+            vmid: "{{ vm_id }}"
+            memory: "{{ vm_memory }}"
+            cores: "{{ vm_cores }}"
+            update: yes
+
+        - name: Start the VM
+          community.general.proxmox_kvm:
+            api_host: "{{ proxmox_api_host }}"
+            api_user: "{{ proxmox_api_user }}"
+            api_password: "{{ proxmox_password }}"
+            node: "{{ proxmox_node }}"
+            vmid: "{{ vm_id }}"
+            state: started
+
+        - name: Success message
+          debug:
+            msg: "VM {{ vm_name }} (ID: {{ vm_id }}) created successfully!"
